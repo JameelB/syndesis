@@ -48,7 +48,8 @@ func main() {
 
 	logrus.Infof("Watching %s, %s, %s, %d", resource, kind, namespace, resyncPeriod)
 	sdk.Watch(resource, kind, namespace, resyncPeriod)
-	sdk.Watch("v1", "ConfigMap", "enmasse", resyncPeriod)
+	sdk.Watch("v1", "Secret", namespace, resyncPeriod)
+	sdk.Watch("v1", "ConfigMap", namespace, resyncPeriod)
 	sdk.Handle(stub.NewHandler())
 	sdk.Run(ctx)
 }
