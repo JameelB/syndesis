@@ -24,7 +24,7 @@ func (h *Handler) Handle(ctx context.Context, event sdk.Event) error {
 	case *api.Syndesis:
 		return syndesis.Reconcile(o, event.Deleted)
 	case *v1.ConfigMap:
-		return enmasse.Reconcile(o, event.Deleted)
+		return enmasse.ReconcileConfigmap(o, event.Deleted)
 	}
 	return nil
 }
