@@ -2,11 +2,11 @@ package enmasse
 
 import (
 	"encoding/json"
-	"os"
 
 	"github.com/operator-framework/operator-sdk/pkg/sdk"
 	glog "github.com/sirupsen/logrus"
 	enmasse "github.com/syndesisio/syndesis/install/operator/pkg/apis/enmasse/v1alpha1"
+	syndesis "github.com/syndesisio/syndesis/install/operator/pkg/apis/syndesis/v1alpha1"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -15,69 +15,67 @@ import (
 func ReconcileConfigmap(configmap *v1.ConfigMap, deleted bool) error {
 	// TODO: Get configmap of enmasse standard
 	if val, ok := configmap.ObjectMeta.Labels["type"]; ok && val == "address-space" {
-		return reconcileAddressSpace(configmap, deleted)
+		return reconcileConfigMap(configmap, deleted)
 	}
 	return nil
 }
 
-func reconcileAddressSpace(configmap *v1.ConfigMap, deleted bool) error {
+func reconcileConfigMap(configmap *v1.ConfigMap, deleted bool) error {
+	addressSpace, err := getAddressSpaceObj(configmap)
+	if err != nil {
+		glog.Errorf("failed to get enmasse address space object %+v", err)
+		return err
+	}
+
+	// TODO: If not there, create it. If exist, return nil
+	err = sdk.Get(getConnectionCRObj(addressSpace))
+
+	// Create Connection CR
+	err = sdk.Create(addressSpace)
+	if err != nil {
+		glog.Errorf("failed to create address space %+v", err)
+		return err
+	}
+
+	return nil
+}
+
+func getAddressSpaceObj(configmap *v1.ConfigMap) (*enmasse.AddressSpace, error) {
 	var addressSpace enmasse.AddressSpace
 	if err := json.Unmarshal([]byte(configmap.Data["config.json"]), &addressSpace); err != nil {
 		glog.Errorf("Failed to unmarshal the configmap data into an AddressSpace object %+v", err)
-		return err
+		return nil, err
 	}
-
-	adminUsername, adminPassword, err := getKeycloakAdminCredentials()
-	if err != nil {
-		glog.Errorf("failed to get admin username and password from keycloak credentials secret %+v", err)
-		return err
-	}
-
-	// TODO:Check if connection cr already exist
-
-	createKeycloakUser(adminUsername, adminPassword)
-	createConnectionCR()
-	return nil
+	return &addressSpace, nil
 }
 
-func createKeycloakUser(adminUsername, adminPassword string) error {
-	glog.Infof("Creating keycloak user: %s - %s", adminUsername, adminPassword)
-	// TODO:Get authenticated client + token
-	// TODO:Create user
-	return nil
-}
+func getConnectionCRObj(addressSpace *enmasse.AddressSpace) *syndesis.Connection {
+	var messagingEndpoint enmasse.EndpointStatus
+	var amqpPort string
 
-func getKeycloakAdminCredentials() (string, string, error) {
-	// TODO:Get keycloak credentials
-	kcCreds := &v1.Secret{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: "v1",
-		},
+	for _, v := range addressSpace.Status.EndpointStatuses {
+		if v.Name == "messaging" {
+			messagingEndpoint = v
+		}
+	}
+	for _, v := range messagingEndpoint.ServicePorts {
+		if v.Name == "amqp" {
+			amqpPort = string(v.Port)
+		}
+	}
+	amqpURL := "amqp://" + messagingEndpoint.ServiceHost + ":" + amqpPort + "?amqp.saslMechanisms=PLAIN"
+
+	return &syndesis.Connection{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      "keycloak-credentials",
-			Namespace: os.Getenv("WATCH_NAMESPACE"),
+			Name:      "connection-" + addressSpace.Name,
+			Namespace: addressSpace.Namespace,
+		},
+		Spec: syndesis.ConnectionSpec{
+			URL: amqpURL,
+		},
+		Status: syndesis.ConnectionStatus{
+			Ready: false,
+			Phase: "PendingAuth",
 		},
 	}
-	err := sdk.Get(kcCreds)
-	if err != nil {
-		glog.Errorf("failed to get keycloak credentials secret %+v", err)
-		return "", "", err
-	}
-
-	decodedParams := map[string]string{}
-	for k, v := range kcCreds.Data {
-		decodedParams[k] = string(v)
-	}
-
-	return decodedParams["admin.username"], decodedParams["admin.password"], nil
-}
-
-func createConnectionCR() error {
-	// CR needs to have username, password and url
-	return nil
-}
-
-func getConnectionCR() error {
-	return nil
 }
