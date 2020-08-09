@@ -37,7 +37,7 @@
     <syndesis.version>${project.version}</syndesis.version>
 
     <!-- Atlasmap version -->
-    <atlasmap.version>1.35.7</atlasmap.version>
+    <atlasmap.version>1.36.0</atlasmap.version>
     <camel-atlasmap.version>${atlasmap.version}</camel-atlasmap.version>
 
     <!-- Image names -->
@@ -75,7 +75,7 @@
     <errorprone.version>2.3.1</errorprone.version>
 
     <!-- Global camel version used everywhere -->
-    <camel.version>2.21.0.fuse-000094</camel.version>
+    <camel.version>2.21.0.fuse-720007</camel.version>
 
     <dep.plugin.dependency.version>3.0.2</dep.plugin.dependency.version>
     <dep.plugin.pmd.version>3.8</dep.plugin.pmd.version>
@@ -1060,7 +1060,7 @@
 
       <dependency>
         <groupId>io.syndesis.server</groupId>
-        <artifactId>server-connector-generator</artifactId>
+        <artifactId>server-api-generator</artifactId>
         <version>${project.version}</version>
       </dependency>
 
@@ -1344,6 +1344,12 @@
       <dependency>
         <groupId>io.syndesis.connector</groupId>
         <artifactId>connector-irc</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+
+      <dependency>
+        <groupId>io.syndesis.connector</groupId>
+        <artifactId>connector-api-provider</artifactId>
         <version>${project.version}</version>
       </dependency>
 

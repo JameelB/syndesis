@@ -38,6 +38,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 
 /**
  * This class keeps the integration endpoint data aligned with the external state.
@@ -160,16 +161,14 @@ public class EndpointController {
     }
 
     private Optional<String> serverBasePath(Integration integration) {
-        return integration.getSteps()
-            .stream()
+        return allSteps(integration)
             .findFirst()
             .flatMap(Step::getAction)
             .flatMap(action -> action.getMetadata("serverBasePath"));
     }
 
     private Optional<String> contextPath(Integration integration) {
-        return integration.getSteps()
-            .stream()
+        return allSteps(integration)
             .findFirst()
             .flatMap(step -> step.getAction().flatMap(action -> action.propertyTaggedWith(step.getConfiguredProperties(), "context-path")));
     }
@@ -183,13 +182,18 @@ public class EndpointController {
                 while (part.startsWith("/")) {
                     part = part.substring(1);
                 }
-                while (part.endsWith("/")) {
-                    part = part.substring(part.length() - 1);
+
+                while (res.length() > 0 && res.lastIndexOf("/") == res.length() - 1) {
+                    res.deleteCharAt(res.length() - 1);
                 }
                 res.append('/').append(part);
             }
         }
         return res.toString();
+    }
+
+    private static Stream<Step> allSteps(Integration integration) {
+        return integration.getFlows().stream().flatMap(f -> f.getSteps().stream());
     }
 
 }

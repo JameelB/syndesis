@@ -24,25 +24,25 @@ import org.apache.camel.Message;
 
 public class SlackChannelCustomizer implements ComponentProxyCustomizer {
 
-	@Override
-	public void customize(ComponentProxyComponent component, Map<String, Object> options) {
+    @Override
+    public void customize(ComponentProxyComponent component, Map<String, Object> options) {
         component.setBeforeProducer(this::beforeProducer);
         sanitizeUserOrChannel(options);
-	}
+    }
 
     private void sanitizeUserOrChannel(Map<String, Object> options) {
-        String username = (String) options.get("username");
+        String username = (String) options.get("receiver");
         String channel = (String) options.remove("channel");
 
         if (channel != null) {
             if (channel.trim().charAt(0) == '#') {
-            	options.put("channel", channel.trim());
+                options.put("channel", channel.trim());
             } else {
                 options.put("channel", "#" + channel.trim());
             }
         } else if (username != null) {
             if (username.trim().charAt(0) == '@') {
-            	options.put("channel", username.trim());
+                options.put("channel", username.trim());
             } else {
                 options.put("channel", "@" + username.trim());
             }
